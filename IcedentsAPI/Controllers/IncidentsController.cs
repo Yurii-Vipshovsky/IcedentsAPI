@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using IncedentsAPI.Data;
 using IncedentsAPI.Models;
+using IncedentsAPI.Services;
 
 namespace IncedentsAPI.Controllers
 {
@@ -94,7 +95,7 @@ namespace IncedentsAPI.Controllers
         /// If doesn't exit create new contact
         /// </remarks>
         /// <response code="200">Returns a json of created Incident</response>
-        /// <response code="400">If request body is null</response>
+        /// <response code="400">If request body is null or email have invalid format</response>
         /// <response code="404">If request account not found</response>
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -125,6 +126,10 @@ namespace IncedentsAPI.Controllers
             catch (ArgumentNullException ex)
             {
                 return NotFound(ex.Message);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
             }
         }
 
@@ -241,6 +246,10 @@ namespace IncedentsAPI.Controllers
             }
             else
             {
+                if (!ValidationService.IsValidEmail(incident.ContactEmail))
+                {
+                    throw new ArgumentException("Invalid Email format");
+                }
                 contact = new Contact()
                 {
                     FirstName = incident.ContactFirstName,

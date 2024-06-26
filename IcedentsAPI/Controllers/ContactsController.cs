@@ -2,6 +2,8 @@
 using Microsoft.EntityFrameworkCore;
 using IncedentsAPI.Data;
 using IncedentsAPI.Models;
+using System.Text.RegularExpressions;
+using IncedentsAPI.Services;
 
 namespace IncedentsAPI.Controllers
 {
@@ -85,7 +87,7 @@ namespace IncedentsAPI.Controllers
         ///
         /// </remarks>
         /// <response code="200">Returns a json of created Contact</response>
-        /// <response code="400">If contact with Email already exists or request body is null</response>
+        /// <response code="400">If contact with Email already exists or request body is null or Email is isvalid</response>
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> Create([FromBody] NewContactModel contact)
@@ -183,6 +185,11 @@ namespace IncedentsAPI.Controllers
         }
 
         private async Task<Contact> CreateContactFromNewContactModel(NewContactModel contact) {
+            if (!ValidationService.IsValidEmail(contact.Email))
+            {
+                throw new ArgumentException("Invalid email format");
+            }
+
             Contact newContact = new Contact()
             {
                 Email = contact.Email,
