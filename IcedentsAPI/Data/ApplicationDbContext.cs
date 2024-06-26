@@ -1,8 +1,4 @@
 ﻿using IncedentsAPI.Models;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc.RazorPages;
-using System.Collections.Generic;
-using System.Reflection.Emit;
 using Microsoft.EntityFrameworkCore;
 
 namespace IncedentsAPI.Data

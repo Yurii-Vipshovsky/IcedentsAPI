@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using IncedentsAPI.Data;
 using IncedentsAPI.Models;
@@ -12,6 +7,7 @@ namespace IncedentsAPI.Controllers
 {
     [Route("api/[controller]/[action]")]
     [ApiController]
+    [Produces("application/json")]
     public class IncidentsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -21,7 +17,17 @@ namespace IncedentsAPI.Controllers
             _context = context;
         }
 
-        // GET: Incidents
+        /// <summary>
+        /// Get All Incedents.
+        /// </summary>
+        /// <returns>A json list of Incidents</returns>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     GET: api/Incidents/GetAll
+        ///
+        /// </remarks>
+        /// <response code="200">Returns a json list of Incidents</response>
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -34,8 +40,21 @@ namespace IncedentsAPI.Controllers
             return Ok(incedents);
         }
 
-        // GET: Incidents/Details/5
+        /// <summary>
+        /// Get specific Incident.
+        /// </summary>
+        /// <param name="incedentName"></param>
+        /// <returns>A json of specific Incident</returns>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     GET: api/Incidents/GetByName/:incedentName
+        ///
+        /// </remarks>
+        /// <response code="200">Returns a json of specific Incident</response>
+        /// <response code="404">If account with incedentName not found or incedentName is null</response>
         [HttpGet("{incedentName}")]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetByName(string incedentName)
         {
             if (incedentName == null)
@@ -55,11 +74,31 @@ namespace IncedentsAPI.Controllers
             return Ok(incident);
         }
 
-        // POST: Incidents/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        /// <summary>
+        /// Create a new Incident.
+        /// </summary>
+        /// <returns>A json of created Incident</returns>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     POST: api/Incidents/Create
+        ///     {
+        ///         "accountName": "string",
+        ///         "contactFirstName": "string",
+        ///         "contactLastName": "string",
+        ///         "contactEmail": "email@email.com",
+        ///         "incidentDescription": "string"
+        ///     }
+        ///
+        /// If contactEmail exists than update contact information
+        /// If doesn't exit create new contact
+        /// </remarks>
+        /// <response code="200">Returns a json of created Incident</response>
+        /// <response code="400">If request body is null</response>
+        /// <response code="404">If request account not found</response>
         [HttpPost]
-        //[ValidateAntiForgeryToken]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Create([FromBody] RequestBody incident)
         {
             if (incident == null)
@@ -67,78 +106,53 @@ namespace IncedentsAPI.Controllers
                 return BadRequest();
             }
 
-            //var account = await _context.Accounts.FirstOrDefaultAsync(a => a.Name == incident.AccountName);
-
-            //if (account == null)
-            //{
-            //    return NotFound();
-            //}
-
-            //var contact = await _context.Contacts.FirstOrDefaultAsync(c => c.Email == incident.ContactEmail);
-            //if (contact != null)
-            //{
-            //    bool isSame = true;
-            //    if(contact.FirstName != incident.ContactFirstName)
-            //    {
-            //        isSame = false;
-            //        contact.FirstName = incident.ContactFirstName;
-            //    }
-            //    if(contact.LastName != incident.ContactLastName)
-            //    {
-            //        isSame = false;
-            //        contact.LastName = incident.ContactLastName;
-            //    }
-            //    if(contact.AccountName != incident.AccountName)
-            //    {
-            //        isSame = false;
-            //        contact.AccountName = incident.AccountName;
-            //        contact.Account = account;
-            //    }
-            //    if (!isSame)
-            //    {
-            //        _context.Update(contact);
-            //    }
-            //}
-            //else
-            //{
-            //    contact = new Contact()
-            //    {
-            //        FirstName = incident.ContactFirstName,
-            //        LastName = incident.ContactLastName,
-            //        Email = incident.ContactEmail,
-            //        AccountName = incident.AccountName,
-            //        Account = account
-            //    };
-            //    await _context.Contacts.AddAsync(contact);
-            //}
-
-            //var newIncedent = new Incident()
-            //{
-            //    Description = incident.IncidentDescription,
-            //};
-
-            //account.Incident = newIncedent;
-
-            var account = await UpdateContactFromRequestBody(incident);
-            var newIncedent = new Incident()
+            try
             {
-                Description = incident.IncidentDescription,
-            };
+                var account = await UpdateContactFromRequestBody(incident);
+                var newIncedent = new Incident()
+                {
+                    Description = incident.IncidentDescription,
+                };
 
-            account.Incident = newIncedent;
+                account.Incident = newIncedent;
 
-            await _context.AddAsync(newIncedent);
-            _context.Update(account);
-            await _context.SaveChangesAsync();
+                await _context.AddAsync(newIncedent);
+                _context.Update(account);
+                await _context.SaveChangesAsync();
 
-            return Ok(newIncedent);
+                return Ok(newIncedent);
+            }
+            catch (ArgumentNullException ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
 
-        // POST: Incidents/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        /// <summary>
+        /// Edit an existing Incident.
+        /// </summary>
+        /// <returns>A json of edited Incident</returns>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     POST: api/Incidents/Edit/:incedentName
+        ///     {
+        ///         "accountName": "string",
+        ///         "contactFirstName": "string",
+        ///         "contactLastName": "string",
+        ///         "contactEmail": "email@email.com",
+        ///         "incidentDescription": "string"
+        ///     }
+        ///
+        /// If contactEmail exists than update contact information
+        /// If doesn't exit create new contact
+        /// </remarks>
+        /// <response code="200">Returns a json of edited Incident</response>
+        /// <response code="400">If request body is null</response>
+        /// <response code="404">If request account not found</response>
         [HttpPost]
-        //[ValidateAntiForgeryToken]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Edit(string incidentName, [FromBody] RequestBody incident)
         {
             var oldIncedent = await _context.Incedents.FirstOrDefaultAsync(i => i.Name == incidentName);
@@ -146,24 +160,39 @@ namespace IncedentsAPI.Controllers
             {
                 return NotFound();
             }
-            var account = await UpdateContactFromRequestBody(incident);
-            if(oldIncedent.Description != incident.IncidentDescription)
+            try
             {
-                oldIncedent.Description = incident.IncidentDescription;
-                _context.Update(oldIncedent);
-            }
+                var account = await UpdateContactFromRequestBody(incident);
+                if(oldIncedent.Description != incident.IncidentDescription)
+                {
+                    oldIncedent.Description = incident.IncidentDescription;
+                    _context.Update(oldIncedent);
+                }
 
-            account.IncedentName = incidentName;
+                account.IncedentName = incidentName;
             
-            _context.Update(account);
-            await _context.SaveChangesAsync();
+                _context.Update(account);
+                await _context.SaveChangesAsync();
+            }
+            catch (ArgumentNullException ex)
+            {
+                return NotFound(ex.Message);
+            }
 
             return Ok(oldIncedent);
         }
 
-        // POST: Incidents/Delete/5
+        /// <summary>
+        /// Deletes a specific Incident item.
+        /// </summary>
+        /// <remarks>
+        /// Sample request:
+        ///     DELETE: api/Incidents/Delete/:incedentName
+        /// </remarks>
+        /// <param name="incedentName"></param>
+        /// <returns></returns>
+        /// <response code="200">Signalize that incident deleted</response>
         [HttpDelete]
-        //[ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(string incedentName)
         {
             var incident = await _context.Incedents.FindAsync(incedentName);
@@ -173,16 +202,7 @@ namespace IncedentsAPI.Controllers
             }
 
             await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
-        }
-
-        public class RequestBody
-        {
-            public string AccountName { get; set; }
-            public string ContactFirstName { get; set; }
-            public string ContactLastName { get; set; }
-            public string ContactEmail { get; set; } // unique identifier,
-            public string IncidentDescription { get; set; }
+            return Ok();
         }
 
         private async Task<Account> UpdateContactFromRequestBody(RequestBody incident)
@@ -232,11 +252,6 @@ namespace IncedentsAPI.Controllers
                 await _context.Contacts.AddAsync(contact);
             }
             return account;
-        }
-
-        private bool IncidentExists(string id)
-        {
-            return _context.Incedents.Any(e => e.Name == id);
         }
     }
 }

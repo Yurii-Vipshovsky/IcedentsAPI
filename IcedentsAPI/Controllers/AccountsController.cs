@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using IncedentsAPI.Data;
 using IncedentsAPI.Models;
@@ -12,6 +7,7 @@ namespace IncedentsAPI.Controllers
 {
     [Route("api/[controller]/[action]")]
     [ApiController]
+    [Produces("application/json")]
     public class AccountsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -21,7 +17,17 @@ namespace IncedentsAPI.Controllers
             _context = context;
         }
 
-        // GET: Accounts
+        /// <summary>
+        /// Get All Accounts.
+        /// </summary>
+        /// <returns>A json list of Accounts</returns>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     GET: api/Accounts/GetAll
+        ///
+        /// </remarks>
+        /// <response code="200">Returns a json list of Accounts</response>
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -32,8 +38,21 @@ namespace IncedentsAPI.Controllers
             return Ok(accounts);
         }
 
-        // GET: Accounts/Details/5
+        /// <summary>
+        /// Get specific Account.
+        /// </summary>
+        /// <param name="accountName"></param>
+        /// <returns>A json of specific Account</returns>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     GET: api/Accounts/GetByName/:accountName
+        ///
+        /// </remarks>
+        /// <response code="200">Returns a json of specific Account</response>
+        /// <response code="404">If account with accountName not found or accountName is null</response>
         [HttpGet("{accountName}")]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetByName(string accountName)
         {
             if (accountName == null)
@@ -53,11 +72,25 @@ namespace IncedentsAPI.Controllers
             return Ok(account);
         }
 
-        // POST: Accounts/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        /// <summary>
+        /// Create a new Account.
+        /// </summary>
+        /// <returns>A json of created Account</returns>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     POST: api/Accounts/Create
+        ///     {
+        ///         "name": "string",
+        ///         "contactEmail": "email@email.com",
+        ///         "incedentName": "string" Can be Null
+        ///     }
+        ///
+        /// </remarks>
+        /// <response code="200">Returns a json of created Account</response>
+        /// <response code="400">If request body is null</response>
         [HttpPost]
-        //[ValidateAntiForgeryToken]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> Create([FromBody] NewAccountModel account)
         {
             if (account == null)
@@ -79,11 +112,30 @@ namespace IncedentsAPI.Controllers
             }
         }
 
-        // POST: Accounts/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        /// <summary>
+        /// Edit an existing Account.
+        /// </summary>
+        /// <returns>A json of edited Account</returns>
+        /// <param name="AccountName"></param>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     POST: api/Accounts/Edit/:AccountName
+        ///     {
+        ///         "name": "string",
+        ///         "contactEmail": "email@email.com",
+        ///         "incedentName": "string" Can be Null
+        ///     }
+        ///
+        /// </remarks>
+        /// <response code="200">Returns a json of edited Account</response>
+        /// <response code="400">Errors of editing</response>
+        /// <response code="404">If account with Email doesn't exist or request body is null or 
+        ///     AccountName isn't equal to name field in request body
+        /// </response>
         [HttpPost]
-        //[ValidateAntiForgeryToken]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Edit(string AccountName, [FromBody] NewAccountModel account)
         {
             if (account == null || AccountName != account.Name ||
@@ -106,9 +158,17 @@ namespace IncedentsAPI.Controllers
             }
         }
 
-        // POST: Accounts/Delete/5
+        /// <summary>
+        /// Deletes a specific Account item.
+        /// </summary>
+        /// <remarks>
+        /// Sample request:
+        ///     DELETE: api/Accounts/Delete/:AccountName
+        /// </remarks>
+        /// <param name="AccountName"></param>
+        /// <returns></returns>
+        /// <response code="200">Signalize that account deleted</response>
         [HttpDelete]
-        //[ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(string AccountName)
         {
             var account = await _context.Accounts.FindAsync(AccountName);
@@ -118,14 +178,7 @@ namespace IncedentsAPI.Controllers
             }
 
             await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
-        }
-
-        public class NewAccountModel
-        {
-            public string Name { get; set; }
-            public string ContactEmail { get; set; }
-            public string? IncedentName { get; set; }
+            return Ok();
         }
 
         private async Task<(Account,Contact)> CreateAccountFromNewAccountModel(NewAccountModel account)
@@ -162,11 +215,6 @@ namespace IncedentsAPI.Controllers
                 }                
             }
             return (newAccount, contact);
-        }
-
-        private bool AccountExists(string id)
-        {
-            return _context.Accounts.Any(e => e.Name == id);
         }
     }
 }

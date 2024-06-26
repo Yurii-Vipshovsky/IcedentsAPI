@@ -1,18 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using IncedentsAPI.Data;
 using IncedentsAPI.Models;
-using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace IncedentsAPI.Controllers
 {
     [Route("api/[controller]/[action]")]
     [ApiController]
+    [Produces("application/json")]
     public class ContactsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -22,7 +17,17 @@ namespace IncedentsAPI.Controllers
             _context = context;
         }
 
-        // GET: Contacts
+        /// <summary>
+        /// Get All Contacts.
+        /// </summary>
+        /// <returns>A json list of Contacts</returns>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     GET: api/contacts/GetAll
+        ///
+        /// </remarks>
+        /// <response code="200">Returns a json list of Contacts</response>
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -30,18 +35,31 @@ namespace IncedentsAPI.Controllers
             return Ok(contacts);
         }
 
-        // GET: Contacts/Details/5
+        /// <summary>
+        /// Get specific Contact.
+        /// </summary>
+        /// <param name="ContactEmail"></param>
+        /// <returns>A json of specific Contact</returns>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     GET: api/contacts/GetByName/:contactEmail
+        ///
+        /// </remarks>
+        /// <response code="200">Returns a json of specific Contact</response>
+        /// <response code="404">If contact with contactEmail not found or contactEmail is null</response>
         [HttpGet("{contactEmail}")]
-        public async Task<IActionResult> GetByName(string contactEmail)
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetByName(string ContactEmail)
         {
-            if (contactEmail == null)
+            if (ContactEmail == null)
             {
                 return NotFound();
             }
 
             var contact = await _context.Contacts
                 .Include(c => c.Account)
-                .FirstOrDefaultAsync(m => m.Email == contactEmail);
+                .FirstOrDefaultAsync(m => m.Email == ContactEmail);
             if (contact == null)
             {
                 return NotFound();
@@ -50,16 +68,36 @@ namespace IncedentsAPI.Controllers
             return Ok(contact);
         }
 
-        // POST: Contacts/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        /// <summary>
+        /// Create a new Contact.
+        /// </summary>
+        /// <returns>A json of created Contact</returns>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     POST: api/contacts/Create
+        ///     {
+        ///         "email": "email@email.com",
+        ///         "firstName": "string",
+        ///         "lastName": "string",
+        ///         "accountName": "string" Can Be NULL
+        ///     }
+        ///
+        /// </remarks>
+        /// <response code="200">Returns a json of created Contact</response>
+        /// <response code="400">If contact with Email already exists or request body is null</response>
         [HttpPost]
-        //[ValidateAntiForgeryToken]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> Create([FromBody] NewContactModel contact)
         {
             if (contact == null)
             {
-                return BadRequest();
+                return BadRequest("Enter Contact");
+            }
+
+            if(await _context.Contacts.AnyAsync(c => c.Email == contact.Email ))
+            {
+                return BadRequest("Contact with same email exist");
             }
 
             try
@@ -75,14 +113,34 @@ namespace IncedentsAPI.Controllers
             }            
         }
 
-        // POST: Contacts/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        /// <summary>
+        /// Edit an existing Contact.
+        /// </summary>
+        /// <returns>A json of edited Contact</returns>
+        /// <param name="ContactEmail"></param>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     POST: api/contacts/Edit/:ContactEmail
+        ///     {
+        ///         "email": ContactEmail,
+        ///         "firstName": "string",
+        ///         "lastName": "string",
+        ///         "accountName": "string" Can Be NULL
+        ///     }
+        ///
+        /// </remarks>
+        /// <response code="200">Returns a json of edited Contact</response>
+        /// <response code="400">Errors of editing</response>
+        /// <response code="404">If contact with Email doesn't exist or request body is null or
+        ///     ContactEmail isn't equal to email field in request body
+        /// </response>
         [HttpPost]
-        //[ValidateAntiForgeryToken]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Edit(string ContactEmail, [FromBody] NewContactModel contact)
         {
-            if (contact == null || ContactEmail != contact.Email || 
+            if (contact == null || ContactEmail != contact.Email ||
                 !(await _context.Contacts.AnyAsync(e => e.Email == ContactEmail)))
             {
                 return NotFound();
@@ -101,9 +159,17 @@ namespace IncedentsAPI.Controllers
             }            
         }
 
-        // POST: Contacts/Delete/5
+        /// <summary>
+        /// Deletes a specific Contact item.
+        /// </summary>
+        /// <remarks>
+        /// Sample request:
+        ///     DELETE: api/contacts/Delete/:contactEmail
+        /// </remarks>
+        /// <param name="contactEmail"></param>
+        /// <returns></returns>
+        /// <response code="200">Signalize that contact deleted</response>
         [HttpDelete]
-        //[ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(string contactEmail)
         {
             var contact = await _context.Contacts.FindAsync(contactEmail);
@@ -113,14 +179,7 @@ namespace IncedentsAPI.Controllers
             }
 
             await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
-        }
-        public class NewContactModel
-        {
-            public string Email { get; set; }
-            public string FirstName { get; set; }
-            public string LastName { get; set; }
-            public string? AccountName { get; set; }
+            return Ok();
         }
 
         private async Task<Contact> CreateContactFromNewContactModel(NewContactModel contact) {
